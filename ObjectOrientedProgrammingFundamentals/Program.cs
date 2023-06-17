@@ -1,39 +1,49 @@
-﻿/* ---------- LAB 01 - DEYNNI ALMAZAN --------------------------------*/
+﻿/*------LAB 02 DEYNNI ALMAZAN ----------------------------------------------*/
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
-
-VendingMachine vendingMachine = new VendingMachine(123);
+VendingMachine vendingMachine = new VendingMachine();
 
 // ADD PRODUCTS
-Product beans = new Product("Jelly Beans", 2, "A12");
-Product chips = new Product("Potato Chips", 75, "B34");
+Product beans = new Product("Jelly Beans", 2, "A12", "1234");
+Product chocolate = new Product("Hershey Chocolate", 2, "A13", "5678");
+Product chips = new Product("Potato Chips", 12, "B34", "9876");
 
 // ADD STOCK
-vendingMachine.StockItem(beans, 3);
-vendingMachine.StockItem(chips, 5);
+Console.WriteLine(vendingMachine.StockItem(beans, 3));
+Console.WriteLine(vendingMachine.StockItem(chocolate, 10));
+Console.WriteLine(vendingMachine.StockItem(chips, 5));
 
-// ADD MONEY
-vendingMachine.StockFloat(1, 4); // Add four $1 coins to the float
+Dictionary<int, int> coins = new Dictionary<int, int>
+{
+    { 1, 4 },    // Add 4 coins of $1
+    { 2, 10 },   // Add 10 coins of $2
+    { 5, 5 },    // Add 5 coins of $5
+    { 10, 3 },   // Add 3 coins of $10
+    { 20, 2 }    // Add 2 coins of $20
+};
+
+Console.WriteLine(vendingMachine.StockFloat(coins));
 
 
-// SELL  PRODUCTS
-List<int> money = new List<int> { 5 }; // Insert a $5 bill
+// SELL PRODUCTS
+List<int> money = new List<int> { 20 }; // Insert $20 
 string vendResult = vendingMachine.VendItem("A12", money);
 Console.WriteLine(vendResult);
-
-
-// CLASS
+    
 public class VendingMachine
 {
-    public int SerialNumber { get; }
-    public Dictionary<int, int> MoneyFloat { get; }
-    public Dictionary<Product, int> Inventory { get; }
+    private static int serialNumberCounter = 1;
 
-    public VendingMachine(int serialNumber)
+    public int SerialNumber { get; }
+    private Dictionary<int, int> MoneyFloat { get; }
+    private Dictionary<Product, int> Inventory { get; }
+
+    public VendingMachine()
     {
-        SerialNumber = serialNumber;
+        SerialNumber = serialNumberCounter++;
         MoneyFloat = new Dictionary<int, int>();
         Inventory = new Dictionary<Product, int>();
     }
@@ -45,28 +55,32 @@ public class VendingMachine
         else
             Inventory[product] = quantity;
 
-        return $"Product '{product.Name}', code '{product.Code}', price: {product.Price:C}, new quantity: {Inventory[product]}";
+        return
+            $"Product '{product.Name}', code '{product.Code}', price: " +
+            $"{product.Price:C}";
     }
 
-    public string StockFloat(int moneyDenomination, int quantity)
+    public string StockFloat(Dictionary<int, int> coins)
     {
-        if (MoneyFloat.ContainsKey(moneyDenomination))
-            MoneyFloat[moneyDenomination] += quantity;
-        else
-            MoneyFloat[moneyDenomination] = quantity;
-
-        string floatStock = "Float inventory: ";
-        foreach (var kvp in MoneyFloat)
+       foreach (KeyValuePair<int, int> coin in coins)
         {
-            floatStock += $"{kvp.Key}: {kvp.Value}, ";
+            int denomination = coin.Key;
+            int quantity = coin.Value;
+
+            if (MoneyFloat.ContainsKey(denomination))
+                MoneyFloat[denomination] += quantity;
+            else
+                MoneyFloat[denomination] = quantity;
         }
 
-        return floatStock.TrimEnd(',', ' ');
+
+        return string.Empty;
+
     }
 
     public string VendItem(string code, List<int> money)
     {
-        foreach (var kvp in Inventory)
+        foreach (KeyValuePair<Product, int> kvp in Inventory)
         {
             Product product = kvp.Key;
             int quantity = kvp.Value;
@@ -80,21 +94,35 @@ public class VendingMachine
                 int totalMoney = money.Sum();
 
                 if (totalMoney < totalPrice)
-                    return $"Error: Insufficient money provided for '{product.Name}'. Price: {product.Price:C}";
+                    return 
+                        $"Error: Insufficient money provided for '{product.Name}'. " +
+                        $"Price: {product.Price:C}";
 
                 int change = totalMoney - totalPrice;
                 if (change < 0)
-                    return $"Error: Insufficient money provided for '{product.Name}'. Price: {product.Price:C}";
+                    return
+                        $"Error: Insufficient money provided for '{product.Name}'. " +
+                        $"Price: {product.Price:C}";
 
                 // Check if the machine has enough change
                 if (!HasSufficientChange(change))
-                    return $"Error: Unable to provide change for '{product.Name}'. Please insert exact amount.";
+                    return 
+                        $"Error: Unable to provide change for '{product.Name}'. " +
+                        $"Please insert a different amount.";
 
                 // Update inventory
                 Inventory[product]--;
-                UpdateMoneyFloat(money, change);
+                Dictionary<int, int> changeDenominations = UpdateMoneyFloat(change);
 
-                return $"Please enjoy your '{product.Name}' and take your change of {change:C}";
+                string changeString = "Change: ";
+                foreach (KeyValuePair<int, int> denomination in changeDenominations)
+                {
+                    changeString += $"{denomination.Value} coins of ${denomination.Key}, ";
+                }
+                changeString = changeString.TrimEnd(',', ' ');
+
+                return $"Please enjoy your '{product.Name}'. {changeString}";
+
             }
         }
 
@@ -103,7 +131,7 @@ public class VendingMachine
 
     private bool HasSufficientChange(int amount)
     {
-        foreach (var kvp in MoneyFloat)
+        foreach (KeyValuePair<int, int> kvp in MoneyFloat)
         {
             int denomination = kvp.Key;
             int quantity = kvp.Value;
@@ -118,21 +146,14 @@ public class VendingMachine
         return amount == 0;
     }
 
-    private void UpdateMoneyFloat(List<int> money, int change)
-    {
-        foreach (int denomination in money)
-        {
-            if (MoneyFloat.ContainsKey(denomination))
-                MoneyFloat[denomination]++;
-            else
-                MoneyFloat[denomination] = 1;
-        }
 
-        // Deduct change from money float
-        foreach (var kvp in MoneyFloat)
+    private Dictionary<int, int> UpdateMoneyFloat(int change)
+    {
+        Dictionary<int, int> changeDenominations = new Dictionary<int, int>();
+
+        foreach (int denomination in MoneyFloat.Keys.OrderByDescending(x => x))
         {
-            int denomination = kvp.Key;
-            int quantity = kvp.Value;
+            int quantity = MoneyFloat[denomination];
 
             int numCoins = change / denomination;
             if (numCoins > quantity)
@@ -140,21 +161,31 @@ public class VendingMachine
 
             change -= numCoins * denomination;
             MoneyFloat[denomination] -= numCoins;
+
+            if (numCoins > 0)
+                changeDenominations[denomination] = numCoins;
+
+            if (change == 0)
+                break;
         }
+
+        return changeDenominations;
     }
 }
 
 public class Product
 {
-    public string Name
-    { get; }
+    public string Name { get; }
     public int Price { get; }
     public string Code { get; }
+    public string Barcode { get; }
 
-    public Product(string name, int price, string code)
+    public Product(string name, int price, string code, string barcode)
     {
         Name = name;
         Price = price;
         Code = code;
+        Barcode = barcode;
     }
 }
+
