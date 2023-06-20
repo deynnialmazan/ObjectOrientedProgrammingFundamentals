@@ -61,8 +61,6 @@ public class VendingMachine
         {
             Console.WriteLine(ex.Message);
         }
-
-        
     }
 
     public string StockItem(Product product, int quantity)
@@ -87,7 +85,6 @@ public class VendingMachine
         } catch(Exception ex) 
         { 
             return ex.Message;
-
         }
     }
 
@@ -104,7 +101,6 @@ public class VendingMachine
                 MoneyFloat[denomination] = quantity;
         }
 
-
         return string.Empty;
 
     }
@@ -117,8 +113,6 @@ public class VendingMachine
             {
                 throw new ArgumentNullException("Code cannot be empty. Please" +
                     " enter a valid code.");
-
-
             }
 
         } catch(ArgumentNullException ex)
@@ -126,7 +120,6 @@ public class VendingMachine
             return ex.Message;
         }
 
-       
         foreach (KeyValuePair<Product, int> kvp in Inventory)
         {
             Product product = kvp.Key;
@@ -157,8 +150,6 @@ public class VendingMachine
                     return
                         $"Error: Insufficient money provided for '{product.Name}'. " +
                         $"Price: {product.Price:C}";
-
-
 
                 // Check if the machine has enough change
                 if (!HasSufficientChange(change))
@@ -201,7 +192,6 @@ public class VendingMachine
 
         return amount == 0;
     }
-
 
     private Dictionary<int, int> UpdateMoneyFloat(int change)
     {
