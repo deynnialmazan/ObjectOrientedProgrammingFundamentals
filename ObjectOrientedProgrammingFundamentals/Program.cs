@@ -1,37 +1,45 @@
-﻿/*------LAB 02 DEYNNI ALMAZAN ----------------------------------------------*/
+﻿/*------LAB 03 DEYNNI ALMAZAN ----------------------------------------------*/
+//Adding proper error handling
 
 using System;
 using System.Collections.Generic;
 using System.Linq;
 
-VendingMachine vendingMachine = new VendingMachine();
-
-// ADD PRODUCTS
-Product beans = new Product("Jelly Beans", 2, "A12", "1234");
-Product chocolate = new Product("Hershey Chocolate", 2, "A13", "5678");
-Product chips = new Product("Potato Chips", 12, "B34", "9876");
-
-// ADD STOCK
-Console.WriteLine(vendingMachine.StockItem(beans, 3));
-Console.WriteLine(vendingMachine.StockItem(chocolate, 10));
-Console.WriteLine(vendingMachine.StockItem(chips, 5));
-
-Dictionary<int, int> coins = new Dictionary<int, int>
+try
 {
-    { 1, 4 },    // Add 4 coins of $1
-    { 2, 10 },   // Add 10 coins of $2
-    { 5, 5 },    // Add 5 coins of $5
-    { 10, 3 },   // Add 3 coins of $10
-    { 20, 2 }    // Add 2 coins of $20
-};
 
-Console.WriteLine(vendingMachine.StockFloat(coins));
+    VendingMachine vendingMachine = new VendingMachine();
+
+    // ADD PRODUCTS
+    Product beans = new Product("Jelly Beans", 2, "A12", "78963");
+    Product chocolate = new Product("Hershey Chocolate", 2, "A13", "5678");
+    Product chips = new Product("Potato Chips", 12, "B34", "9876");
+
+    // ADD STOCK
+    Console.WriteLine(vendingMachine.StockItem(beans, 3));
+    Console.WriteLine(vendingMachine.StockItem(chocolate, 10));
+    Console.WriteLine(vendingMachine.StockItem(chips, 5));
+
+    Dictionary<int, int> coins = new Dictionary<int, int>
+    {
+        { 1, 4 },    // Add 4 coins of $1
+        { 2, 10 },   // Add 10 coins of $2
+        { 5, 5 },    // Add 5 coins of $5
+        { 10, 3 },   // Add 3 coins of $10
+        { 20, 2 }    // Add 2 coins of $20
+    };
+
+    Console.WriteLine(vendingMachine.StockFloat(coins));
 
 
-// SELL PRODUCTS
-List<int> money = new List<int> { 20 }; // Insert $20 
-string vendResult = vendingMachine.VendItem("A12", money);
-Console.WriteLine(vendResult);
+    // SELL PRODUCTS
+    List<int> money = new List<int> { 10 }; // Insert $20 
+    string vendResult = vendingMachine.VendItem("A12", money);
+    Console.WriteLine(vendResult);
+
+} catch(Exception ex)
+    { Console.WriteLine(ex.Message); }
+
     
 public class VendingMachine
 {
@@ -43,21 +51,44 @@ public class VendingMachine
 
     public VendingMachine()
     {
-        SerialNumber = serialNumberCounter++;
-        MoneyFloat = new Dictionary<int, int>();
-        Inventory = new Dictionary<Product, int>();
+        try
+        {
+            SerialNumber = serialNumberCounter++;
+            MoneyFloat = new Dictionary<int, int>();
+            Inventory = new Dictionary<Product, int>();
+        }
+        catch(Exception ex)
+        {
+            Console.WriteLine(ex.Message);
+        }
+
+        
     }
 
     public string StockItem(Product product, int quantity)
     {
-        if (Inventory.ContainsKey(product))
-            Inventory[product] += quantity;
-        else
-            Inventory[product] = quantity;
+        try
+        {
+            if(quantity < 0)
+            {
+                throw new ArgumentOutOfRangeException("Please enter a valid quantity." +
+                    " It cannot be negative");
+            }
 
-        return
-            $"Product '{product.Name}', code '{product.Code}', price: " +
-            $"{product.Price:C}";
+            if (Inventory.ContainsKey(product))
+                Inventory[product] += quantity;
+            else
+                Inventory[product] = quantity;
+
+            return
+                $"Product '{product.Name}', code '{product.Code}', price: " +
+                $"{product.Price:C}";
+
+        } catch(Exception ex) 
+        { 
+            return ex.Message;
+
+        }
     }
 
     public string StockFloat(Dictionary<int, int> coins)
@@ -80,6 +111,22 @@ public class VendingMachine
 
     public string VendItem(string code, List<int> money)
     {
+        try
+        {
+            if(string.IsNullOrEmpty(code))
+            {
+                throw new ArgumentNullException("Code cannot be empty. Please" +
+                    " enter a valid code.");
+
+
+            }
+
+        } catch(ArgumentNullException ex)
+        {
+            return ex.Message;
+        }
+
+       
         foreach (KeyValuePair<Product, int> kvp in Inventory)
         {
             Product product = kvp.Key;
@@ -90,11 +137,18 @@ public class VendingMachine
                 if (quantity == 0)
                     return $"Error: Item '{product.Name}' is out of stock.";
 
+                foreach (int amount in money)
+                    
+                if (amount < 0)
+                {
+                    throw new ArgumentOutOfRangeException("Invalid money" +
+                        " provided. Amount cannot be negative");
+                }
                 int totalPrice = product.Price;
                 int totalMoney = money.Sum();
 
                 if (totalMoney < totalPrice)
-                    return 
+                    return
                         $"Error: Insufficient money provided for '{product.Name}'. " +
                         $"Price: {product.Price:C}";
 
@@ -104,11 +158,13 @@ public class VendingMachine
                         $"Error: Insufficient money provided for '{product.Name}'. " +
                         $"Price: {product.Price:C}";
 
+
+
                 // Check if the machine has enough change
                 if (!HasSufficientChange(change))
-                    return 
+                    return
                         $"Error: Unable to provide change for '{product.Name}'. " +
-                        $"Please insert a different amount.";
+                        $" Please insert a different amount.";
 
                 // Update inventory
                 Inventory[product]--;
@@ -172,20 +228,70 @@ public class VendingMachine
         return changeDenominations;
     }
 }
-
 public class Product
 {
-    public string Name { get; }
-    public int Price { get; }
-    public string Code { get; }
-    public string Barcode { get; }
+    private int _price;
+    private string? _name;
+    private string? _code;
+    private string _barcode;
+
+    public int Price
+    {
+        get { return _price; }
+        set
+        {
+            if (value <= 0)
+            {
+                throw new ArgumentOutOfRangeException("Product price cannot be zero or negative");
+            }
+            _price = value;
+        }
+    }
+
+    public string Name
+    {
+        get { return _name!; }
+        set
+        {
+            if (string.IsNullOrEmpty(value))
+            {
+                throw new ArgumentNullException("The name of the product is null or empty");
+            }
+            _name = value;
+        }
+    }
+
+    public string Code
+    {
+        get { return _code!; }
+        set
+        {
+            if (string.IsNullOrEmpty(value))
+            {
+                throw new ArgumentNullException("The product code is null or empty");
+            }
+            _code = value;
+        }
+    }
+
+    public string Barcode
+    {
+        get { return _barcode; }
+        set
+        {
+            if (string.IsNullOrEmpty(value))
+            {
+                throw new ArgumentNullException("The product barcode is null or empty");
+            }
+            _barcode = value;
+        }
+    }
 
     public Product(string name, int price, string code, string barcode)
     {
-        Name = name;
-        Price = price;
-        Code = code;
-        Barcode = barcode;
+            Price = price;
+            Name = name;
+            Code = code;
+            Barcode = barcode;
     }
 }
-
